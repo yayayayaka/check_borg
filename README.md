@@ -73,24 +73,23 @@ USAGE:
 For example, you could call this plugin manually this way:
 
 ```
-check_borg -r user@remoteserver:/data/borg/myrepository -p my_secret_password \
-					 -l /var/log/borg/myrepository_rc.log
+check_borg -r user@remoteserver:/data/borg/myrepository -p my_secret_password -l /var/log/borg/myrepository_rc.log
 ```
 
 ## Output
 
 Depending on how the checks went, the plugin will output one of these messages:
 
-* OK
-* UNKNOWN: return code log not found, not readable or incomplete
-* WARNING: borg create reached its normal end, but there were warnings
-* WARNING: borg prune reached its normal end, but there were warnings
-* WARNING: borg check reached its normal end, but there were warnings
-* WARNING: last complete backup was $time_since_last seconds ago. Warn is $WARN
-* CRITICAL: borg create did not reach its normal end
-* CRITICAL: borg prune did not reach its normal end
-* CRITICAL: borg check did not reach its normal end 
-* CRITICAL: last complete backup was $time_since_last seconds ago. Crit is $CRIT
+* `OK`
+* `UNKNOWN: return code log not found, not readable or incomplete`
+* `WARNING: borg create reached its normal end, but there were warnings`
+* `WARNING: borg prune reached its normal end, but there were warnings`
+* `WARNING: borg check reached its normal end, but there were warnings`
+* `WARNING: last complete backup was $time_since_last seconds ago. Warn is $WARN`
+* `CRITICAL: borg create did not reach its normal end`
+* `CRITICAL: borg prune did not reach its normal end`
+* `CRITICAL: borg check did not reach its normal end `
+* `CRITICAL: last complete backup was $time_since_last seconds ago. Crit is $CRIT`
 
 ## Icinga2 integration
 
