@@ -1,0 +1,137 @@
+#!/bin/sh
+#
+# Icinga2 plugin to monitor Borg backups.
+#
+# CLI parameters can be displayed by parsing `-h`. See the README for more
+# informations.
+
+# TODO catch if the password is not OK
+
+# FUNCTIONS
+result () {
+  case $1 in
+    0) echo "OK";rc=0 ;;
+    1) echo "UNKNOWN: return code log not found, not readable or incomplete";rc=3 ;;
+    2) echo "WARNING: borg create reached its normal end, but there were warnings";rc=1 ;;
+    3) echo "WARNING: borg prune reached its normal end, but there were warnings";rc=1 ;;
+    4) echo "WARNING: borg check reached its normal end, but there were warnings";rc=1 ;;
+    5) echo "WARNING: last complete backup was $time_since_last seconds ago. Warn is $WARN";rc=1 ;;
+    6) echo "CRITICAL: borg create did not reach its normal end";rc=2 ;;
+    7) echo "CRITICAL: borg prune did not reach its normal end";rc=2 ;;
+    8) echo "CRITICAL: borg check did not reach its normal end";rc=2 ;;
+    9) echo "CRITICAL: last complete backup was $time_since_last seconds ago. Crit is $CRIT";rc=2 ;;
+  esac
+  exit $rc
+}
+
+usage () {
+  echo ""
+  echo "USAGE: "
+  echo "  $0 [-c 52] [-w 26] [-r repository] [-p repository_password] [-l return_code_log][-CPh]"
+  echo "    -c Critical threshold in seconds (default: 187200 == 52 hours)"
+  echo "    -C don't check for borg create return code"
+  echo "    -h Show this help message"
+  echo "    -l return code log file (default: /var/log/borg/borg-rc.log)"
+  echo "    -p repository password"
+  echo "    -P don't check for borg prune return code"
+  echo "    -r repository"
+  echo "    -w Warning threshold in seconds (default: 93600 == 26 hours)"
+  echo ""
+  exit 1
+}
+
+
+# MAIN SCRIPT
+
+  # CLI arguments comprehension
+  while getopts "c:w:r:p:l:CPh" opt; do
+    case $opt in
+      c)
+        if ! echo $OPTARG | grep -q "[A-Za-z]" && [ -n "$OPTARG" ]
+        then
+          CRIT=$OPTARG
+        else
+          usage
+        fi
+      ;;
+      C) CREATE=false ;;
+      h) usage ;;
+      l) return_code_log=$OPTARG ;;
+      p) repository_password=$OPTARG ;;
+      P) PRUNE=false ;;
+      r)
+        if ! [ -z $OPTARG ]
+        then
+          repository=$OPTARG
+        else
+          usage
+        fi
+      ;;
+      w)
+        if ! echo $OPTARG | grep -q "[A-Za-z]" && [ -n "$OPTARG" ]
+        then
+          WARN=$OPTARG
+        else
+          usage
+        fi
+      ;;
+      *)
+        usage
+      ;;
+    esac
+  done
+
+  # export repository_password if one has been passed
+  if ! [ -z "$repository_password" ]; then
+    export BORG_PASSPHRASE=$repository_password
+  fi
+
+  # Set WARN and CRIT times if they have not already been explicitly set
+  if [ -z "$WARN" ]; then
+    WARN=93600
+  fi
+  if [ -z "$CRIT" ]; then
+    CRIT=187200
+  fi
+
+  if ! [ "$CREATE" = false ] && [ "$PRUNE" = false ]; then
+    # Set return_code_log file if it was not already explicitly set
+    if [ -z "$return_code_log" ]; then
+      return_code_log="/var/log/borg/borg-rc.log"
+    fi
+    # Check if the file exists and if we can read it
+    [ -r $return_code_log ] || result 1
+  fi
+
+  # Test return codes
+  if [ "$CREATE" = true ]; then
+    create_return_code=$(grep "create" $return_code_log | sed 's/create: //')
+    [ "$create_return_code" -eq 1 ] && result 2
+    [ "$create_return_code" -eq 2 ] && result 6
+  fi
+  if [ "$PRUNE" = true ]; then
+    prune_return_code=$(grep "prune" $return_code_log | sed 's/prune: //')
+    [ "$prune_return_code" -eq 1 ] && result 3
+    [ "$prune_return_code" -eq 2 ] && result 7
+  fi
+
+  # Check when was the last backup
+  last_run=$(borg list $repository |tail -n 1 |egrep -o "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}")
+  last_run_unix=$(date --date="$last_run" +%s)
+  now=$(date +%s)
+
+  # Assess last run time relative to warn/crit values and system uptime.
+  time_since_last=$((now-last_run_unix))
+  [ $time_since_last -ge $CRIT ] && result 9
+  [ $time_since_last -ge $WARN ] && result 5
+
+  # Check repository consistency
+  borg check $repository >/dev/null 2>&1
+  check_return_code=$?
+  [ "$check_return_code" -eq 1 ] && result 4
+  [ "$check_return_code" -eq 2 ] && result 8
+
+  # If we reached here all is ok.
+  result 0
+
+# END
