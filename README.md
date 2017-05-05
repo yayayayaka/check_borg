@@ -52,8 +52,8 @@ prune_rc=$?
 echo "create: $create_rc\nprune: $prune_rc" > /var/log/borg/borg-rc.log
 ```
 
-If you do not want to check the return codes on either `borg create` or `borg
-prune`, you can pass the `-C` and `-P` arguments. More on this below.
+If you do not want to check the return codes on either `borg create` or `borg prune`,
+you can pass the `-C` and `-P` arguments. More on this below.
 
 ## CLI options
 
