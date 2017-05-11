@@ -5,8 +5,6 @@
 # CLI parameters can be displayed by parsing `-h`. See the README for more
 # informations.
 
-# TODO catch if the password is not OK
-
 # FUNCTIONS
 result () {
   case $1 in
