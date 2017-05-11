@@ -59,7 +59,7 @@ you can pass the `-C` and `-P` arguments. More on this below.
 
 <pre>
 USAGE: 
-  check_borg [-c 52] [-w 26] [-r repository] [-p repository_password] [-l return_code_log][-CPh]
+  check_borg [-c 52] [-w 26] [-r repository] [-p repository_password] [-l return_code_log][-CPSh]
     -c Critical threshold in seconds (default: 187200 == 52 hours)
     -C don't check for borg create return code
     -h Show this help message
@@ -67,6 +67,7 @@ USAGE:
     -p repository password
     -P don't check for borg prune return code
     -r repository
+    -S run borg commands as super user (sudo)
     -w Warning threshold in seconds (default: 93600 == 26 hours)
 </pre>
 
@@ -114,13 +115,16 @@ object CheckCommand "borg" {
     }
     "-P" = {
       set_if = "$borg_dont_check_purge_rc$"
-      description = "Don't check for borg purge return code."
+		}
+    "-S" = {
+      set_if = "$borg_sudo$"
+      description = "Run borg commands as super user (sudo)."
     }
   }
 
   vars.borg_dont_check_create_rc = false
   vars.borg_dont_check_purge_rc = false
-}
+  vars.borg_sudo = false
 ```
 
 Once that is done, you need to define a service. Here is an example of a service
@@ -140,6 +144,16 @@ object Service "borg" {
 
 Note that if you connect to a remote server via SSH with borg, the user running
 icinga2 (`nagios` on Debian) will also need to be able to connect to this server.
+
+You you can also bypass this issue by using the `-S` parameter and running all
+borg commands during the check as root.
+
+To give the `nagios` permission to run borg as root, you can add this in
+`/etc/sudoers.d/20_nagios`:
+
+```
+nagios ALL = (root) NOPASSWD: /usr/bin/borg
+```
 
 # Thanks
 

@@ -27,7 +27,7 @@ result () {
 usage () {
   echo ""
   echo "USAGE: "
-  echo "  $0 [-c 52] [-w 26] [-r repository] [-p repository_password] [-l return_code_log][-CPh]"
+  echo "  $0 [-c 52] [-w 26] [-r repository] [-p repository_password] [-l return_code_log][-CPSh]"
   echo "    -c Critical threshold in seconds (default: 187200 == 52 hours)"
   echo "    -C don't check for borg create return code"
   echo "    -h Show this help message"
@@ -35,16 +35,18 @@ usage () {
   echo "    -p repository password"
   echo "    -P don't check for borg prune return code"
   echo "    -r repository"
+  echo "    -S run borg commands as super user (sudo)"
   echo "    -w Warning threshold in seconds (default: 93600 == 26 hours)"
   echo ""
   exit 1
 }
 
+borg_command="borg"
 
 # MAIN SCRIPT
 
   # CLI arguments comprehension
-  while getopts "c:w:r:p:l:CPh" opt; do
+  while getopts "c:w:r:p:l:CPSh" opt; do
     case $opt in
       c)
         if ! echo $OPTARG | grep -q "[A-Za-z]" && [ -n "$OPTARG" ]
@@ -67,6 +69,7 @@ usage () {
           usage
         fi
       ;;
+      S) borg_command="sudo borg" ;;
       w)
         if ! echo $OPTARG | grep -q "[A-Za-z]" && [ -n "$OPTARG" ]
         then
@@ -116,7 +119,7 @@ usage () {
   fi
 
   # Check when was the last backup
-  last_run=$(borg list $repository |tail -n 1 |egrep -o "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}")
+  last_run=$($borg_command list $repository |tail -n 1 |egrep -o "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}")
   last_run_unix=$(date --date="$last_run" +%s)
   now=$(date +%s)
 
@@ -126,7 +129,7 @@ usage () {
   [ $time_since_last -ge $WARN ] && result 5
 
   # Check repository consistency
-  borg check $repository >/dev/null 2>&1
+  $borg_command check $repository >/dev/null 2>&1
   check_return_code=$?
   [ "$check_return_code" -eq 1 ] && result 4
   [ "$check_return_code" -eq 2 ] && result 8
