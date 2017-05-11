@@ -121,11 +121,16 @@ object CheckCommand "borg" {
       description = "Run borg commands as super user (sudo)."
     }
   }
+  timeout = 1h
 
   vars.borg_dont_check_create_rc = false
   vars.borg_dont_check_purge_rc = false
   vars.borg_sudo = false
 ```
+
+You might want to monitor you first runs to check how much time the check takes
+to run. `borg check` can take some time on large repositories and if you reach
+the timeout icinga2 will kill the process and leave borg lock files in place.
 
 Once that is done, you need to define a service. Here is an example of a service
 you could declare:
@@ -136,11 +141,13 @@ object Service "borg" {
 
   host_name = "my_server"
   check_command = "borg"
-  check_interval = 12h
+  check_interval = 1d
   vars.borg_repository = "username@remoteserver:/data/borg/myrepository"
 	vars.borg_password = "my_secret_password"
 }
 ```
+
+### Remote repositories
 
 Note that if you connect to a remote server via SSH with borg, the user running
 icinga2 (`nagios` on Debian) will also need to be able to connect to this server.
@@ -154,6 +161,15 @@ To give the `nagios` permission to run borg as root, you can add this in
 ```
 nagios ALL = (root) NOPASSWD: /usr/bin/borg
 ```
+
+### Downtimes
+
+It might be a good idea to schedule a global downtime for icinga2 checks when
+you backup your machine.
+
+Please be aware that if you run `check_borg` while a backup is underway, at best
+the check will fail because of the lock files and at worst it might affect the
+backup procedures. Proceed with caution.
 
 # Thanks
 
