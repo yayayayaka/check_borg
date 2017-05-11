@@ -93,9 +93,57 @@ Depending on how the checks went, the plugin will output one of these messages:
 
 ## Icinga2 integration
 
+To use `check_borg` with icinga2 you will need to add two things to your config.
+
+First, we need to add a `CheckCommand` object. This will typically reside in
+your `commands.conf` file in the `global-templates` zone:
+
+```
+object CheckCommand "borg" {
+  command = [ PluginDir + "/check_borg" ] //constants.conf -> const PluginDir
+
+  arguments = {
+    "-c" = "$borg_critical_threshold$"
+    "-w" = "$borg_warning_threshold$"
+    "-l" = "$borg_rc_log$"
+    "-p" = "$borg_password$"
+    "-r" = "$borg_repository$"
+    "-C" = {
+      set_if = "$borg_dont_check_create_rc$"
+      description = "Don't check for borg create return code."
+    }
+    "-P" = {
+      set_if = "$borg_dont_check_purge_rc$"
+      description = "Don't check for borg purge return code."
+    }
+  }
+
+  vars.borg_dont_check_create_rc = false
+  vars.borg_dont_check_purge_rc = false
+}
+```
+
+Once that is done, you need to define a service. Here is an example of a service
+you could declare:
+
+```
+object Service "borg" {
+  import "generic-service"
+
+  host_name = "my_server"
+  check_command = "borg"
+  check_interval = 12h
+  vars.borg_repository = "username@remoteserver:/data/borg/myrepository"
+	vars.borg_password = "my_secret_password"
+}
+```
+
+Note that if you connect to a remote server via SSH with borg, the user running
+icinga2 (`nagios` on Debian) will also need to be able to connect to this server.
+
 # Thanks
 
 Most of the structure of this plugin comes from the great work Alexander Swen
 and others did on the [check_puppet_agent][] plugin. Thank you!
 
-[check_puppet_agent]: https://github.com/aswen/nagios-plugins.git)
+[check_puppet_agent]: https://github.com/aswen/nagios-plugins.git
