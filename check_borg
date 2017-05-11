@@ -27,26 +27,30 @@ result () {
 usage () {
   echo ""
   echo "USAGE: "
-  echo "  $0 [-c 52] [-w 26] [-r repository] [-p repository_password] [-l return_code_log][-CPSh]"
-  echo "    -c Critical threshold in seconds (default: 187200 == 52 hours)"
+  echo "  $0 [-c 52] [-w 26] [-r repository] [-p repository_password] [-l return_code_log][-CHPSh]"
+  echo "    -c critical threshold in seconds (default: 187200 == 52 hours)"
   echo "    -C don't check for borg create return code"
-  echo "    -h Show this help message"
+  echo "    -h show this help message"
+  echo "    -H don't check for repository consistency with borg check"
   echo "    -l return code log file (default: /var/log/borg/borg-rc.log)"
   echo "    -p repository password"
   echo "    -P don't check for borg prune return code"
   echo "    -r repository"
   echo "    -S run borg commands as super user (sudo)"
-  echo "    -w Warning threshold in seconds (default: 93600 == 26 hours)"
+  echo "    -w warning threshold in seconds (default: 93600 == 26 hours)"
   echo ""
   exit 1
 }
 
 borg_command="borg"
+CREATE=true
+PRUNE=true
+CHECK=true
 
 # MAIN SCRIPT
 
   # CLI arguments comprehension
-  while getopts "c:w:r:p:l:CPSh" opt; do
+  while getopts "c:w:r:p:l:CHPSh" opt; do
     case $opt in
       c)
         if ! echo $OPTARG | grep -q "[A-Za-z]" && [ -n "$OPTARG" ]
@@ -58,6 +62,7 @@ borg_command="borg"
       ;;
       C) CREATE=false ;;
       h) usage ;;
+      H) CHECK=false ;;
       l) return_code_log=$OPTARG ;;
       p) repository_password=$OPTARG ;;
       P) PRUNE=false ;;
@@ -129,10 +134,12 @@ borg_command="borg"
   [ $time_since_last -ge $WARN ] && result 5
 
   # Check repository consistency
-  $borg_command check $repository >/dev/null 2>&1
-  check_return_code=$?
-  [ "$check_return_code" -eq 1 ] && result 4
-  [ "$check_return_code" -eq 2 ] && result 8
+  if [ "$CHECK" = true ]; then
+    $borg_command check $repository >/dev/null 2>&1
+    check_return_code=$?
+    [ "$check_return_code" -eq 1 ] && result 4
+    [ "$check_return_code" -eq 2 ] && result 8
+  fi
 
   # If we reached here all is ok.
   result 0

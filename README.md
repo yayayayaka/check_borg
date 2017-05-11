@@ -59,16 +59,17 @@ you can pass the `-C` and `-P` arguments. More on this below.
 
 <pre>
 USAGE: 
-  check_borg [-c 52] [-w 26] [-r repository] [-p repository_password] [-l return_code_log][-CPSh]
-    -c Critical threshold in seconds (default: 187200 == 52 hours)
+  check_borg [-c 52] [-w 26] [-r repository] [-p repository_password] [-l return_code_log][-CHPSh]
+    -c critical threshold in seconds (default: 187200 == 52 hours)
     -C don't check for borg create return code
-    -h Show this help message
+    -h show this help message
+    -H don't check for repository consistency with borg check
     -l return code log file (default: /var/log/borg/borg-rc.log)
     -p repository password
     -P don't check for borg prune return code
     -r repository
     -S run borg commands as super user (sudo)
-    -w Warning threshold in seconds (default: 93600 == 26 hours)
+    -w warning threshold in seconds (default: 93600 == 26 hours)
 </pre>
 
 For example, you could call this plugin manually this way:
@@ -113,6 +114,10 @@ object CheckCommand "borg" {
       set_if = "$borg_dont_check_create_rc$"
       description = "Don't check for borg create return code."
     }
+    "-H" = {
+      set_if = "$borg_dont_check_consistency$"
+      description = "Don't check for repository consistency with borg check."
+    }
     "-P" = {
       set_if = "$borg_dont_check_purge_rc$"
 		}
@@ -124,6 +129,7 @@ object CheckCommand "borg" {
   timeout = 1h
 
   vars.borg_dont_check_create_rc = false
+  vars.borg_dont_check_consistency = false
   vars.borg_dont_check_purge_rc = false
   vars.borg_sudo = false
 ```
