@@ -72,7 +72,7 @@ CHECK=true
           usage
         fi
       ;;
-      S) borg_command="sudo borg" ;;
+      S) borg_command="sudo -E borg" ;;
       w)
         if ! echo $OPTARG | grep -q "[A-Za-z]" && [ -n "$OPTARG" ]
         then

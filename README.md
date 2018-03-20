@@ -165,7 +165,7 @@ To give the `nagios` permission to run borg as root, you can add this in
 `/etc/sudoers.d/20_nagios`:
 
 ```
-nagios ALL = (root) NOPASSWD: /usr/bin/borg
+nagios ALL = (root) NOPASSWD:SETENV: /usr/bin/borg
 ```
 
 ### Downtimes
