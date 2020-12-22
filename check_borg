@@ -19,7 +19,7 @@ result () {
     8) echo "CRITICAL: borg check did not reach its normal end";rc=2 ;;
     9) echo "CRITICAL: last complete backup was $time_since_last seconds ago. Crit is $CRIT";rc=2 ;;
   esac
-  exit $rc
+  exit "$rc"
 }
 
 usage () {
@@ -51,9 +51,9 @@ CHECK=true
   while getopts "c:w:r:p:l:CHPSh" opt; do
     case $opt in
       c)
-        if ! echo $OPTARG | grep -q "[A-Za-z]" && [ -n "$OPTARG" ]
+        if ! echo "$OPTARG" | grep -q "[A-Za-z]" && [ -n "$OPTARG" ]
         then
-          CRIT=$OPTARG
+          CRIT="$OPTARG"
         else
           usage
         fi
@@ -61,22 +61,22 @@ CHECK=true
       C) CREATE=false ;;
       h) usage ;;
       H) CHECK=false ;;
-      l) return_code_log=$OPTARG ;;
-      p) repository_password=$OPTARG ;;
+      l) return_code_log="$OPTARG" ;;
+      p) repository_password="$OPTARG" ;;
       P) PRUNE=false ;;
       r)
-        if ! [ -z $OPTARG ]
+        if [ -n "$OPTARG" ]
         then
-          repository=$OPTARG
+          repository="$OPTARG"
         else
           usage
         fi
       ;;
       S) borg_command="sudo -E borg" ;;
       w)
-        if ! echo $OPTARG | grep -q "[A-Za-z]" && [ -n "$OPTARG" ]
+        if ! echo "$OPTARG" | grep -q "[A-Za-z]" && [ -n "$OPTARG" ]
         then
-          WARN=$OPTARG
+          WARN="$OPTARG"
         else
           usage
         fi
@@ -88,8 +88,8 @@ CHECK=true
   done
 
   # export repository_password if one has been passed
-  if ! [ -z "$repository_password" ]; then
-    export BORG_PASSPHRASE=$repository_password
+  if [ -n "$repository_password" ]; then
+    export BORG_PASSPHRASE="$repository_password"
   fi
 
   # Set WARN and CRIT times if they have not already been explicitly set
@@ -108,10 +108,12 @@ CHECK=true
     # Check if the file exists and if we can read it
     [ -r $return_code_log ] || result 1
   fi
+  # Check if the file exists and if we can read it
+  [ -r "$return_code_log" ] || result 1
 
   # Test return codes
   if [ "$CREATE" = true ]; then
-    create_return_code=$(grep "create" $return_code_log | sed 's/create: //')
+    create_return_code=$(grep "create" "$return_code_log" | sed 's/create: //')
     [ "$create_return_code" -eq 1 ] && result 2
     [ "$create_return_code" -eq 2 ] && result 6
   fi
@@ -122,7 +124,7 @@ CHECK=true
   fi
 
   # Check when was the last backup
-  last_run=$($borg_command list $repository |tail -n 1 |egrep -o "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}")
+  last_run=$($borg_command list "$repository" |tail -n 1 | grep -E -o "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}")
   last_run_unix=$(date --date="$last_run" +%s)
   now=$(date +%s)
 
@@ -133,7 +135,7 @@ CHECK=true
 
   # Check repository consistency
   if [ "$CHECK" = true ]; then
-    $borg_command check $repository >/dev/null 2>&1
+    $borg_command check "$repository" >/dev/null 2>&1
     check_return_code=$?
     [ "$check_return_code" -eq 1 ] && result 4
     [ "$check_return_code" -eq 2 ] && result 8
