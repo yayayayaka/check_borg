@@ -100,14 +100,13 @@ CHECK=true
     CRIT=187200
   fi
 
-  if ! [ "$CREATE" = false ] && [ "$PRUNE" = false ]; then
-    # Set return_code_log file if it was not already explicitly set
-    if [ -z "$return_code_log" ]; then
-      return_code_log="/var/log/borg/borg-rc.log"
-    fi
-    # Check if the file exists and if we can read it
-    [ -r $return_code_log ] || result 1
+  # Set return_code_log file if it was not already explicitly set
+  if [ -z "$return_code_log" ]; then
+    return_code_log="/var/log/borg/borg-rc.log"
   fi
+  # Check if the file exists and if we can read it
+  [ -r $return_code_log ] || result 1
+
   # Check if the file exists and if we can read it
   [ -r "$return_code_log" ] || result 1
 
